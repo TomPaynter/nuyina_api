@@ -6,6 +6,6 @@ RUN pip install --no-cache-dir \
     pynmea2 \
     psycopg2-binary
 
-COPY ingest.py .
+# COPY ingest.py .
 
-CMD ["python", "ingest.py"]
+CMD ["python", "/ingest.py"]

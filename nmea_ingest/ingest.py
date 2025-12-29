@@ -3,6 +3,18 @@ import pynmea2
 import psycopg2
 import datetime
 import os
+import logging
+import sys
+
+# -----------------------
+# Logging → Docker logs
+# -----------------------
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    handlers=[logging.StreamHandler(sys.stdout)],
+)
+log = logging.getLogger(__name__)
 
 UDP_IP = "0.0.0.0"
 UDP_PORT = 1234
@@ -22,11 +34,12 @@ conn.autocommit = True
 cur = conn.cursor()
 
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
 sock.bind((UDP_IP, UDP_PORT))
 
-print("Listening for NMEA on UDP 1234")
+log.info("NMEA ingest started, listening on UDP %s", UDP_PORT)
 
-# rolling state so different NMEA sentences can combine
 state = {
     "lat": None,
     "lon": None,
@@ -75,8 +88,17 @@ def insert_row():
         state["heave"],
     ))
 
+    log.info(
+        "Inserted shipnav lat=%.6f lon=%.6f sog=%s cog=%s hdg=%s",
+        state["lat"] or -999,
+        state["lon"] or -999,
+        state["sog"],
+        state["cog"],
+        state["heading"],
+    )
+
 while True:
-    data, _ = sock.recvfrom(4096)
+    data, addr = sock.recvfrom(4096)
     line = data.decode("ascii", errors="ignore").strip()
 
     if not line.startswith("$"):
@@ -84,6 +106,8 @@ while True:
 
     try:
         msg = pynmea2.parse(line)
+
+        log.debug("Received %s from %s", msg.sentence_type, addr)
 
         if isinstance(msg, pynmea2.types.talker.GGA):
             state["lat"] = msg.latitude
@@ -104,12 +128,5 @@ while True:
             state["cog"] = msg.true_track
             state["sog"] = msg.spd_over_grnd_kts
 
-        # Proprietary examples (vendor-specific)
-        elif msg.sentence_type == "ASHR":  # $PASHR
-            state["heading"] = msg.heading
-            state["roll"] = msg.roll
-            state["pitch"] = msg.pitch
-            state["heave"] = msg.heave
-
     except Exception as e:
-        print("Parse error:", e, line)
+        log.warning("NMEA parse error: %s | %s", e, line)

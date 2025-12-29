@@ -29,8 +29,15 @@ services:
       DB_NAME: app_db
       DB_USER: app_user
       DB_PASS: password
+    ports:  
+      - "1234:1234/udp"
+    volumes:
+      - "./nmea_ingest/ingest.py:/ingest.py"
+      - "./nmea_ingest/tester.py:/tester.py"
     networks:
       - internal_net
+      - external_net
+
 
 
   postgrest:
