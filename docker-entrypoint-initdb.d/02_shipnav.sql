@@ -28,3 +28,4 @@ CREATE TABLE elog.shipnav (
 SELECT create_hypertable('elog.shipnav', 'timestamp', if_not_exists => TRUE);
 
 GRANT SELECT ON elog.shipnav TO nuyinapi_ro;
+SELECT add_retention_policy('elog.shipnav', INTERVAL '90 days');

@@ -63,6 +63,8 @@ services:
       - "5051:80"
     networks:
       - external_net
+      - internal_net
+
 
 volumes:
   pgadmin-data:
