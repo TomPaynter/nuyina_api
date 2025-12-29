@@ -1,0 +1,5 @@
+CREATE SCHEMA IF NOT EXISTS elog;
+
+CREATE ROLE nuyinapi_ro NOLOGIN;
+
+GRANT USAGE ON SCHEMA elog TO nuyinapi_ro;
